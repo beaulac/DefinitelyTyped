@@ -1,54 +1,291 @@
-// Type definitions for algoliasearch-client-js 3.18.1
+// Type definitions for algoliasearch-client-js 3.23.0
 // Project: https://github.com/algolia/algoliasearch-client-js
 // Definitions by: Baptiste Coquelle <https://github.com/cbaptiste>
+//                 Antoine Beauvais-Lacasse <https://github.com/beaulac>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 
 declare namespace algoliasearch {
-    interface AlgoliaResponse {
+
+    interface AlgoliaPerAttributeResults<AttributeResult> {
+        [attributeName: string]: AttributeResult;
+    }
+
+    type AlgoliaMatchLevel = 'none' | 'partial' | 'full';
+    type AlgoliaTypoTolerance = boolean | 'min' | 'strict';
+    type AlgoliaQueryType = 'prefixLast' | 'prefixAll' | 'prefixNone';
+    type AlgoliaRemoveWordsStrategy = 'none' | 'lastWords' | 'firstWords' | 'alloptional';
+    type AlgoliaExactOnSingleWordStrategy = 'attribute' | 'none' | 'word';
+
+    /**
+     * https://www.algolia.com/doc/api-client/javascript/search/#search-response-format
+     * https://www.algolia.com/doc/api-client/javascript/parameters/attributesToHighlight/
+     */
+    interface AlgoliaHighlightResult {
+        /**
+         * Markup text with occurrences highlighted.
+         * The tags used for highlighting are specified via highlightPreTag and highlightPostTag.
+         */
+        value: string;
+        /**
+         * Indicates how well the attribute matched the search query.
+         */
+        matchLevel: AlgoliaMatchLevel;
+        /**
+         * List of words from the query that matched the object.
+         */
+        matchedWords: string[];
+        /**
+         * Whether the entire attribute value is highlighted.
+         */
+        fullyHighlighted: boolean;
+    }
+
+    /**
+     * https://www.algolia.com/doc/api-client/javascript/search/#search-response-format
+     * https://www.algolia.com/doc/api-client/javascript/parameters/attributesToSnippet/
+     */
+    interface AlgoliaSnippetResult {
+        /**
+         * Markup text with occurrences highlighted and optional ellipsis indicators.
+         * The tags used for highlighting are specified via highlightPreTag and highlightPostTag.
+         * The text used to indicate ellipsis is specified via snippetEllipsisText.
+         */
+        value: string;
+        /**
+         * Indicates how well the attribute matched the search query.
+         */
+        matchLevel: AlgoliaMatchLevel;
+    }
+
+    interface AlgoliaGeoloc {
+        lat: number;
+        lng: number;
+    }
+
+    interface AlgoliaDistanceFrom extends AlgoliaGeoloc {
+        distance: number;
+    }
+
+    /**
+     * https://www.algolia.com/doc/api-client/javascript/search/#search-response-format
+     * https://www.algolia.com/doc/api-client/javascript/parameters/getRankingInfo/
+     */
+    interface AlgoliaRankingInfo {
+        /**
+         * Number of typos encountered when matching the record.
+         * Corresponds to the typos ranking criterion in the ranking formula.
+         */
+        nbTypos: number;
+        /**
+         * Position of the most important matched attribute in the attributes to index list.
+         * Corresponds to the attribute ranking criterion in the ranking formula.
+         */
+        firstMatchedWord: number;
+        /**
+         * When the query contains more than one word, the sum of the distances between matched words.
+         * Corresponds to the proximity criterion in the ranking formula.
+         */
+        proximityDistance: number;
+        /**
+         * Custom ranking for the object, expressed as a single numerical value.
+         * Conceptually, it’s what the position of the object would be in the list of all objects sorted by custom ranking.
+         * Corresponds to the custom criterion in the ranking formula.
+         */
+        userScore: number;
+        /**
+         * Distance between the geo location in the search query and the best matching geo location in the record, divided by the geo precision.
+         */
+        geoDistance: number;
+        /**
+         * Precision used when computed the geo distance, in meters.
+         * All distances will be floored to a multiple of this precision.
+         */
+        geoPrecision: number;
+        /**
+         * Number of exactly matched words.
+         * If alternativeAsExact is set, it may include plurals and/or synonyms.
+         */
+        nbExactWords: number;
+        /**
+         * Number of matched words, including prefixes and typos.
+         */
+        words: number;
+        /**
+         * This field is reserved for advanced usage. It will be zero in most cases.
+         */
+        filters: number;
+        /**
+         * Geo location that matched the query.
+         * Note: Only returned for a geo search.
+         */
+        matchedGeoLocation?: AlgoliaDistanceFrom;
+
+        _distinctSeqID?: number;
+    }
+
+    /**
+     * https://www.algolia.com/doc/api-client/javascript/search/#search-response-format
+     */
+    interface AlgoliaObject {
+        /**
+         * Each entry in an index has a unique identifier called objectID.
+         */
+        objectID: number | string;
+
+        /**
+         * Geoloc queries require objects to have this property:
+         */
+        _geoloc?: AlgoliaGeoloc | AlgoliaGeoloc[];
+    }
+    /**
+     * A convenience type to attach Algolia properties to user-defined objects:
+     */
+    type AlgoliaRecord<T> = T & AlgoliaObject;
+
+    /**
+     * https://www.algolia.com/doc/api-client/javascript/search/#search-response-format
+     */
+    interface AlgoliaResponseObject extends AlgoliaObject {
+        /**
+         * Highlighted attributes.
+         * Note: Only returned when attributesToHighlight is non-empty.
+         */
+        _highlightResult?: AlgoliaPerAttributeResults<AlgoliaHighlightResult>;
+        /**
+         * Snippeted attributes.
+         * Note: Only returned when attributesToSnippet is non-empty.
+         */
+        _snippetResult?: AlgoliaPerAttributeResults<AlgoliaSnippetResult>;
+        /**
+         * Ranking information.
+         * Note: Only returned when getRankingInfo is true.
+         */
+        _rankingInfo?: AlgoliaRankingInfo;
+    }
+    /**
+     * A convenience type to attach Algolia properties to user-defined objects:
+     */
+    type AlgoliaResponseRecord<T> = T & AlgoliaResponseObject;
+
+    interface AlgoliaFacetResult {
+        [facetValue: string]: number;
+    }
+
+    interface AlgoliaFacetStats {
+        min: number;
+        max: number;
+        avg: number;
+        sum: number;
+    }
+
+    /**
+     * https://github.com/algolia/algoliasearch-client-js#response-format
+     */
+    interface AlgoliaResponse<T = any> {
         /**
          * Contains all the hits matching the query
-         * https://github.com/algolia/algoliasearch-client-js#response-format
          */
-        hits: any[];
+        hits: AlgoliaResponseRecord<T>[];
         /**
          * Current page
-         * https://github.com/algolia/algoliasearch-client-js#response-format
          */
         page: number;
         /**
          * Number of total hits matching the query
-         * https://github.com/algolia/algoliasearch-client-js#response-format
+         *
+         * Note: Not returned if you use offset/length for pagination.
          */
-        nbHits: number;
+        nbHits?: number;
+        /**
+         * Whether the nbHits is exhaustive (true) or approximate (false).
+         */
+        exhaustiveNbHits: boolean;
         /**
          * Number of pages
-         * https://github.com/algolia/algoliasearch-client-js#response-format
          */
         nbPages: number;
         /**
          * Number of hits per pages
-         * https://github.com/algolia/algoliasearch-client-js#response-format
          */
         hitsPerPage: number;
         /**
          * Engine processing time (excluding network transfer)
-         * https://github.com/algolia/algoliasearch-client-js#response-format
          */
         processingTimeMS: number;
         /**
          * Query used to perform the search
-         * https://github.com/algolia/algoliasearch-client-js#response-format
          */
         query: string;
         /**
+         * A markup text indicating which parts of the original query have been removed in order to retrieve a non-empty result set.
+         * The removed parts are surrounded by <em> tags.
+         *
+         * Note: Only returned when removeWordsIfNoResults is set to lastWords or firstWords.
+         */
+        queryAfterRemoval?: string;
+        /**
          * GET parameters used to perform the search
-         * https://github.com/algolia/algoliasearch-client-js#response-format
          */
         params: string;
+        /**
+         * Used to return warnings about the query.
+         */
+        message?: string;
+        /**
+         * The computed geo location.
+         * Warning: for legacy reasons, this parameter is a string and not an object.
+         * Format: ${lat},${lng}, where the latitude and longitude are expressed as decimal floating point numbers.
+         *
+         * Note: Only returned when aroundLatLngViaIP is set.
+         */
+        aroundLatLng?: string;
+        /**
+         * The automatically computed radius.
+         * Warning: for legacy reasons, this parameter is a string and not an integer.
+         *
+         * Note: Only returned for geo queries without an explicitly specified radius (see {@link AlgoliaQuery.aroundRadius}).
+         */
+        automaticRadius?: number;
+
+        /* When getRankingInfo is set to true, the following additional fields are returned: */
+        /**
+         * Actual host name of the server that processed the request.
+         */
+        serverUsed?: string;
+        /**
+         * The query string that will be searched, after normalization.
+         */
+        parsedQuery?: string;
+        /**
+         * @deprecated
+         * Please use exhaustiveFacetsCount in remplacement.
+         */
+        timeoutCounts?: boolean;
+        /**
+         * @deprecated
+         * Please use exhaustiveFacetsCount in remplacement.
+         */
+        timeoutHits?: boolean;
+
+        /* When facets is non-empty, the following additional fields are returned: */
+        /**
+         * Maps each facet name to the corresponding facet counts
+         */
+        facets?: AlgoliaPerAttributeResults<AlgoliaFacetResult>;
+        /**
+         * Statistics for numerical facets.
+         * Note: Only returned when at least one of the returned facets contains numerical values.
+         */
+        facets_stats?: AlgoliaPerAttributeResults<AlgoliaFacetStats>
+        /**
+         * Whether the counts of the facet values are exhaustive (true) or approximate (false).
+         */
+        exhaustiveFacetsCount?: boolean;
     }
+
     /*
-    Interface for the algolia client object
-    */
+     Interface for the algolia client object
+     */
     interface AlgoliaClient {
         /**
          * Initialization of the index
@@ -743,8 +980,8 @@ declare namespace algoliasearch {
         deleteUserKey(key: string): Promise<any> ;
     }
     /*
-    Interface describing available options when initializing a client
-    */
+     Interface describing available options when initializing a client
+     */
     interface ClientOptions {
         /**
          * Timeout for requests to our servers, in milliseconds
@@ -771,8 +1008,8 @@ declare namespace algoliasearch {
         hosts?: { read?: string[], write?: string[] };
     }
     /*
-    Interface describing options available for gettings the logs
-    */
+     Interface describing options available for gettings the logs
+     */
     interface LogsOptions {
         /**
          * Specify the first entry to retrieve (0-based, 0 is the most recent log entry).
@@ -800,7 +1037,7 @@ declare namespace algoliasearch {
          * 'error' Retrieve only the errors (same as onlyErrors parameters)
          * https://github.com/algolia/algoliasearch-client-js#get-logs---getlogs
          */
-            type?: string;
+        type?: string;
     }
     /**
      * Describe the action object used for batch operation
@@ -898,7 +1135,7 @@ declare namespace algoliasearch {
          * Use an empty string to search all types (default behavior)
          * https://github.com/algolia/algoliasearch-client-js#search-synonyms---searchsynonyms
          */
-            type?: string;
+        type?: string;
         /**
          * Number of hits per page
          * default: 100
@@ -906,9 +1143,9 @@ declare namespace algoliasearch {
          */
         hitsPerPage?: number;
     }
-    interface AlgoliaBrowseResponse {
+    interface AlgoliaBrowseResponse<T = any> {
         cursor?: string;
-        hits: any[];
+        hits: AlgoliaResponseRecord<T>[];
         params: string;
         query: string;
         processingTimeMS: number;
@@ -927,7 +1164,7 @@ declare namespace algoliasearch {
          * values: synonym,oneWaySynonym
          * https://github.com/algolia/algoliasearch-client-js#save-synonym---savesynonym
          */
-            type: string;
+        type: string;
         /**
          * Values used for the synonym
          * https://github.com/algolia/algoliasearch-client-js#save-synonym---savesynonym
@@ -1009,10 +1246,10 @@ declare namespace algoliasearch {
         slaves?: string[];
         /**
          * Limit the number of facet values returned for each facet
-         * default: ""
+         * default: 100
          * https://github.com/algolia/algoliasearch-client-js#maxvaluesperfacet
          */
-        maxValuesPerFacet?: string;
+        maxValuesPerFacet?: number;
         /**
          * Default list of attributes to highlight. If set to null, all indexed attributes are highlighted.
          * default: null
@@ -1076,7 +1313,7 @@ declare namespace algoliasearch {
          * 'strict' Hits matching with 2 typos are not retrieved if there are some matching without typos.
          * https://github.com/algolia/algoliasearch-client-js#typotolerance
          */
-        typoTolerance?: any;
+        typoTolerance?: AlgoliaTypoTolerance
         /**
          * If set to false, disables typo tolerance on numeric tokens (numbers).
          * default: true
@@ -1084,17 +1321,25 @@ declare namespace algoliasearch {
          */
         allowTyposOnNumericTokens?: boolean;
         /**
-         * If set to true, plural won't be considered as a typo
-         * default: false
-         * https://github.com/algolia/algoliasearch-client-js#ignoreplurals
+         * This parameter may be:
+         * a boolean: enable or disable plurals for all supported languages;
+         * a list of language ISO codes for which plurals should be enabled.
+         * https://www.algolia.com/doc/api-client/javascript/parameters/ignorePlurals/
          */
-        ignorePlurals?: boolean;
+        ignorePlurals?: boolean | string[];
         /**
          * List of attributes on which you want to disable typo tolerance
-         * default: ""
-         * https://github.com/algolia/algoliasearch-client-js#disabletypotoleranceonattributes
+         * The list must be a subset of the searchableAttributes index setting.
+         * default: []
+         * https://www.algolia.com/doc/api-client/javascript/parameters/disableTypoToleranceOnAttributes/
          */
-        disableTypoToleranceOnAttributes?: string;
+        disableTypoToleranceOnAttributes?: string[];
+        /**
+         * List of words on which typo tolerance will be disabled.
+         * default: []
+         * https://www.algolia.com/doc/api-client/javascript/parameters/disableTypoToleranceOnWords/
+         */
+        disableTypoToleranceOnWords?: string[];
         /**
          * Specify the separators (punctuation characters) to index.
          * default: ""
@@ -1109,7 +1354,7 @@ declare namespace algoliasearch {
          * 'prefixNone' No query word is interpreted as a prefix. This option is not recommended.
          * https://github.com/algolia/algoliasearch-client-js#querytype
          */
-        queryType?: any;
+        queryType?: AlgoliaQueryType;
         /**
          * This option is used to select a strategy in order to avoid having an empty result page
          * default: 'none'
@@ -1119,7 +1364,7 @@ declare namespace algoliasearch {
          * 'none' No specific processing is done when a query does not return any results
          * https://github.com/algolia/algoliasearch-client-js#removewordsifnoresults
          */
-        removeWordsIfNoResults?: string;
+        removeWordsIfNoResults?: AlgoliaRemoveWordsStrategy;
         /**
          * Enables the advanced query syntax
          * default: false
@@ -1131,7 +1376,7 @@ declare namespace algoliasearch {
          * default: []
          * https://github.com/algolia/algoliasearch-client-js#optionalwords
          */
-        optionalWords?: string[];
+        optionalWords?: string | string[];
         /**
          * Remove stop words from the query before executing it
          * default: false
@@ -1139,7 +1384,7 @@ declare namespace algoliasearch {
          * a list of language ISO codes (as a comma-separated string) for which stop words should be enable
          * https://github.com/algolia/algoliasearch-client-js#removestopwords
          */
-        removeStopWords?: string[];
+        removeStopWords?: boolean | string[];
         /**
          * List of attributes on which you want to disable prefix matching
          * default: []
@@ -1160,45 +1405,37 @@ declare namespace algoliasearch {
          * 'attribute': exact set to 1 if there is an attribute containing a string equals to the query
          * https://github.com/algolia/algoliasearch-client-js#exactonsinglewordquery
          */
-        exactOnSingleWordQuery?: string;
+        exactOnSingleWordQuery?: AlgoliaExactOnSingleWordStrategy;
         /**
-         * Specify the list of approximation that should be considered as an exact match in the ranking formula
-         * default: ['ignorePlurals', 'singleWordSynonym']
-         * 'ignorePlurals': alternative words added by the ignorePlurals feature
-         * 'singleWordSynonym': single-word synonym (For example "NY" = "NYC")
-         * 'multiWordsSynonym': multiple-words synonym
-         * https://github.com/algolia/algoliasearch-client-js#alternativesasexact
+         * List of numeric attributes that can be used as numerical filters.
+         * default: all numeric attributes
+         * https://www.algolia.com/doc/api-client/javascript/parameters/numericAttributesForFiltering/
          */
-        alternativesAsExact?: any;
+        numericAttributesForFiltering?: string[];
+        /**
+         * Allows compression of big integer arrays.
+         * default: false
+         * https://www.algolia.com/doc/api-client/javascript/parameters/allowCompressionOfIntegerArray/
+         */
+        allowCompressionOfIntegerArray?: boolean;
         /**
          * The name of the attribute used for the Distinct feature
          * default: null
-         * https://github.com/algolia/algoliasearch-client-js#attributefordistinct
+         * https://www.algolia.com/doc/api-client/javascript/parameters/attributeForDistinct/
          */
         attributeForDistinct?: string;
         /**
          * If set to 1, enables the distinct feature, disabled by default, if the attributeForDistinct index setting is set.
-         * https://github.com/algolia/algoliasearch-client-js#distinct
-         */
-        distinct?: any;
-        /**
-         * All numerical attributes are automatically indexed as numerical filters
-         * default ''
-         * https://github.com/algolia/algoliasearch-client-js#numericattributestoindex
-         */
-        numericAttributesToIndex?: string[];
-        /**
-         * Allows compression of big integer arrays.
          * default: false
-         * https://github.com/algolia/algoliasearch-client-js#allowcompressionofintegerarray
+         * https://www.algolia.com/doc/api-client/javascript/parameters/distinct/
          */
-        allowCompressionOfIntegerArray?: boolean;
+        distinct?: number | boolean;
         /**
-         * Specify alternative corrections that you want to consider.
-         * default: []
-         * https://github.com/algolia/algoliasearch-client-js#altcorrections
+         * If set to false, words matched via synonym expansion will not be replaced by the matched synonym in the highlighted result.
+         * default: true
+         * https://www.algolia.com/doc/api-client/javascript/parameters/replaceSynonymsInHighlight/
          */
-        altCorrections?: [{}];
+        replaceSynonymsInHighlight?: boolean;
         /**
          * Configure the precision of the proximity ranking criterion
          * default: 1
@@ -1206,11 +1443,16 @@ declare namespace algoliasearch {
          */
         minProximity?: number;
         /**
-         * This is an advanced use-case to define a token substitutable by a list of words without having the original token searchable
-         * default: ''
-         * https://github.com/algolia/algoliasearch-client-js#placeholders
+         * Choose which fields the response will contain. Applies to search and browse queries.
+         * https://www.algolia.com/doc/api-client/javascript/parameters/responseFields/
          */
-        placeholders?: any;
+        responseFields?: string[];
+        /**
+         * Maximum number of facet hits to return during a search for facet values.
+         * default: 10
+         * https://www.algolia.com/doc/api-client/javascript/parameters/maxFacetHits/
+         */
+        maxFacetHits?: number;
     }
 
     interface AlgoliaQueryParameters {
@@ -1411,7 +1653,7 @@ declare namespace algoliasearch {
          * 'none' No specific processing is done when a query does not return any results
          * https://github.com/algolia/algoliasearch-client-js#removewordsifnoresults
          */
-        removeWordsIfNoResults?: string;
+        removeWordsIfNoResults?: AlgoliaRemoveWordsStrategy;
         /**
          * Enables the advanced query syntax
          * default: false
@@ -1431,7 +1673,7 @@ declare namespace algoliasearch {
          * a list of language ISO codes (as a comma-separated string) for which stop words should be enable
          * https://github.com/algolia/algoliasearch-client-js#removestopwords
          */
-        removeStopWords?: string[];
+        removeStopWords?: boolean | string[];
         /**
          * List of attributes on which you want to disable the computation of exact criteria
          * default: []
@@ -1446,7 +1688,7 @@ declare namespace algoliasearch {
          * 'attribute': exact set to 1 if there is an attribute containing a string equals to the query
          * https://github.com/algolia/algoliasearch-client-js#exactonsinglewordquery
          */
-        exactOnSingleWordQuery?: string;
+        exactOnSingleWordQuery?: AlgoliaExactOnSingleWordStrategy;
         /**
          * Specify the list of approximation that should be considered as an exact match in the ranking formula
          * default: ['ignorePlurals', 'singleWordSynonym']
@@ -1525,4 +1767,5 @@ declare namespace algoliasearch {
 }
 
 declare function algoliasearch(applicationId: string, apiKey: string, options?: algoliasearch.ClientOptions): algoliasearch.AlgoliaClient;
+// NB: Might need to enable "allowSyntheticDefaultImports": true
 export = algoliasearch;
